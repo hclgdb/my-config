@@ -1,0 +1,81 @@
+name: Auto Sync Configs
+
+on:
+  # 每天北京时间早上 8:00 运行 (UTC 0:00)
+  schedule:
+    - cron: '0 0 * * *'
+  # 允许手动触发 (在 Actions 页面点击 Run workflow)
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout My Repo
+        uses: actions/checkout@v4
+
+      - name: Sync from Upstreams
+        run: |
+          # 配置 Git 用户信息（用于提交代码）
+          git config --global user.name "GitHub Action"
+          git config --global user.email "action@github.com"
+
+          # 创建临时工作区
+          mkdir -p temp_work
+          
+          # ----------------------------------------------------------------
+          # 1. 处理 YaNet (只取 Mihomo 下的一个 JS 文件)
+          # ----------------------------------------------------------------
+          echo ">>> Syncing YaNet..."
+          # 浅克隆(depth=1)只下载最新版，速度极快
+          git clone --depth 1 --branch main https://github.com/dahaha-365/YaNet.git temp_work/yanet
+          
+          # 强制覆盖那个特定的 JS 文件
+          cp -f temp_work/yanet/Mihomo/global_script.js scripts/YaNet/global_script.js || echo "YaNet script not found!"
+          
+          # ----------------------------------------------------------------
+          # 2. 处理 Blackmatrix (Rules 和 Icons)
+          # ----------------------------------------------------------------
+          echo ">>> Syncing Blackmatrix..."
+          git clone --depth 1 --branch master https://github.com/blackmatrix7/ios_rule_script.git temp_work/bm
+          
+          # 同步 Rules (使用 rsync 保持目录一致，--delete 会删除对方已经删掉的文件)
+          # 注意：为了安全，这里不使用 --delete，只覆盖更新存在的文件和增加新文件
+          rsync -av temp_work/bm/rule/Clash/ rules/
+          
+          # 同步 Icons
+          rsync -av temp_work/bm/icon/color/ icons/
+          
+          # ----------------------------------------------------------------
+          # 3. 处理 Sirkey (整个仓库)
+          # ----------------------------------------------------------------
+          echo ">>> Syncing Sirkey..."
+          git clone --depth 1 --branch main https://github.com/sirkey5/clash--singbox--subsotre.js.git temp_work/sirkey
+          
+          # 排除 .git 文件夹，复制所有内容到 scripts/Sirkey
+          rsync -av --exclude='.git' temp_work/sirkey/ scripts/Sirkey/
+          
+          # ----------------------------------------------------------------
+          # 清理临时文件
+          # ----------------------------------------------------------------
+          rm -rf temp_work
+
+      - name: Commit and Push changes
+        run: |
+          # 查看状态
+          git status
+          
+          # 添加所有变更
+          git add .
+          
+          # 如果有变更，则提交并推送；如果没有变更，则提示并跳过
+          if ! git diff-ignore-submodules --quiet; then
+            git commit -m "Auto sync: Update configs from upstream $(date +'%Y-%m-%d')"
+            git push
+            echo "Changes pushed successfully."
+          else
+            echo "No changes detected. Skipping push."
+          fi
