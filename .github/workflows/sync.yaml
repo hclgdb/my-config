@@ -6,9 +6,21 @@ on:
     - cron: '0 0 * * *'
   # 允许手动触发 (在 Actions 页面点击 Run workflow)
   workflow_dispatch:
+    inputs:
+      force_overwrite_ai:
+        description: '强制覆盖AI配置 (慎用！会覆盖自定义的AI分类)'
+        required: false
+        default: false
+        type: boolean
+      create_pr_on_conflict:
+        description: '检测到AI配置冲突时创建PR而不是直接推送'
+        required: false
+        default: true
+        type: boolean
 
 permissions:
   contents: write
+  pull-requests: write
 
 jobs:
   sync:
@@ -37,14 +49,89 @@ jobs:
           cp -f temp_work/yanet/Mihomo/global_script.js scripts/YaNet/global_script.js || echo "YaNet script not found!"
           
           # ----------------------------------------------------------------
-          # 2. 处理 Blackmatrix (Rules 和 Icons)
+          # 2. 处理 Blackmatrix (Rules 和 Icons) - 智能同步
           # ----------------------------------------------------------------
           echo ">>> Syncing Blackmatrix..."
           git clone --depth 1 --branch master https://github.com/blackmatrix7/ios_rule_script.git temp_work/bm
           
-          # 同步 Rules (使用 rsync 保持目录一致，--delete 会删除对方已经删掉的文件)
-          # 注意：为了安全，这里不使用 --delete，只覆盖更新存在的文件和增加新文件
-          rsync -av temp_work/bm/rule/Clash/ rules/
+          # AI配置处理逻辑
+          PROTECTED_DIRS=("OpenAI" "Anthropic" "Gemini" "Copilot" "AI" "GlobalMedia")
+          FORCE_OVERWRITE="${{ github.event.inputs.force_overwrite_ai }}"
+          CREATE_PR_ON_CONFLICT="${{ github.event.inputs.create_pr_on_conflict }}"
+          
+          # 检测AI配置冲突
+          echo ">>> Checking for AI configuration conflicts..."
+          AI_CONFLICTS=false
+          for dir in "${PROTECTED_DIRS[@]}"; do
+            if [ -d "rules/$dir" ] && [ -d "temp_work/bm/rule/Clash/$dir" ]; then
+              # 检查是否有实际差异
+              if ! diff -r "rules/$dir" "temp_work/bm/rule/Clash/$dir" >/dev/null 2>&1; then
+                echo "⚠️  Conflict detected in: $dir"
+                AI_CONFLICTS=true
+              fi
+            fi
+          done
+          
+          if [ "$AI_CONFLICTS" = true ] && [ "$FORCE_OVERWRITE" != "true" ]; then
+            echo "🛑 AI配置冲突检测到！"
+            echo "选项1: 手动触发时勾选 'force_overwrite_ai' 强制覆盖"
+            echo "选项2: 让工作流创建PR供您审核 (当前设置: $CREATE_PR_ON_CONFLICT)"
+            
+            if [ "$CREATE_PR_ON_CONFLICT" = "true" ]; then
+              echo "📝 将创建PR模式，保留冲突文件供手动解决..."
+              # 设置环境变量，后续创建PR
+              echo "SHOULD_CREATE_PR=true" >> $GITHUB_ENV
+              echo "AI_CONFLICTS_DETECTED=true" >> $GITHUB_ENV
+            else
+              echo "❌ 同步中止，请手动解决冲突或调整设置"
+              exit 1
+            fi
+          fi
+          
+          if [ "$FORCE_OVERWRITE" = "true" ] || [ "$AI_CONFLICTS" = false ]; then
+            # 正常同步流程
+            echo ">>> Syncing rules (normal mode)..."
+            rsync -av temp_work/bm/rule/Clash/ rules/
+          else
+            # 冲突模式：备份并部分同步
+            echo ">>> Backing up existing AI configurations..."
+            mkdir -p temp_work/backup
+            for dir in "${PROTECTED_DIRS[@]}"; do
+              if [ -d "rules/$dir" ]; then
+                cp -r "rules/$dir" "temp_work/backup/"
+                echo "Backed up: $dir"
+              fi
+            done
+            
+            # 同步除AI外的其他规则
+            echo ">>> Syncing non-AI rules..."
+            rsync -av temp_work/bm/rule/Clash/ rules/ \
+              --exclude="OpenAI/" \
+              --exclude="Anthropic/" \
+              --exclude="Gemini/" \
+              --exclude="Copilot/" \
+              --exclude="AI/" \
+              --exclude="GlobalMedia/"
+            
+            # 恢复原有AI配置
+            echo ">>> Restoring existing AI configurations..."
+            for dir in "${PROTECTED_DIRS[@]}"; do
+              if [ -d "temp_work/backup/$dir" ]; then
+                cp -r "temp_work/backup/$dir" "rules/"
+                echo "Restored: $dir"
+              fi
+            done
+            
+            # 同时保存上游的AI配置供对比
+            echo ">>> Saving upstream AI configs for manual review..."
+            mkdir -p temp_work/upstream_ai
+            for dir in "${PROTECTED_DIRS[@]}"; do
+              if [ -d "temp_work/bm/rule/Clash/$dir" ]; then
+                cp -r "temp_work/bm/rule/Clash/$dir" "temp_work/upstream_ai/"
+                echo "Saved upstream $dir for comparison"
+              fi
+            done
+          fi
           
           # 同步 Icons
           rsync -av temp_work/bm/icon/color/ icons/
@@ -63,22 +150,138 @@ jobs:
           # ----------------------------------------------------------------
           rm -rf temp_work
 
+      - name: Create Conflict Resolution Files
+        if: env.AI_CONFLICTS_DETECTED == 'true'
+        run: |
+          # 创建冲突解决指南文件
+          cat > CONFLICT_RESOLUTION.md << 'EOF'
+          # 🚨 AI配置冲突检测报告
+          
+          ## 冲突概述
+          检测到以下AI相关配置存在冲突，需要手动审核：
+          
+          EOF
+          
+          # 记录具体冲突
+          PROTECTED_DIRS=("OpenAI" "Anthropic" "Gemini" "Copilot" "AI" "GlobalMedia")
+          for dir in "${PROTECTED_DIRS[@]}"; do
+            if [ -d "rules/$dir" ] && [ -d "temp_work/upstream_ai/$dir" ]; then
+              if ! diff -r "rules/$dir" "temp_work/upstream_ai/$dir" >/dev/null 2>&1; then
+                echo "### 📁 $dir" >> CONFLICT_RESOLUTION.md
+                echo "- 当前配置: \`rules/$dir/\`" >> CONFLICT_RESOLUTION.md
+                echo "- 上游配置: \`temp_work/upstream_ai/$dir/\`" >> CONFLICT_RESOLUTION.md
+                echo "" >> CONFLICT_RESOLUTION.md
+                
+                # 保存上游配置到可比较的位置
+                cp -r "temp_work/upstream_ai/$dir" "rules/${dir}_upstream_$(date +%Y%m%d)"
+                echo "✅ 上游配置已保存为: rules/${dir}_upstream_$(date +%Y%m%d)" >> CONFLICT_RESOLUTION.md
+              fi
+            fi
+          done
+          
+          cat >> CONFLICT_RESOLUTION.md << 'EOF'
+          
+          ## 解决方案
+          
+          ### 方式1: 手动比较和合并
+          1. 使用 VS Code 或其他工具比较 `rules/AI目录/` 和 `rules/AI目录_upstream_日期/`
+          2. 手动选择要保留的规则
+          3. 删除不需要的 `*_upstream_*` 文件夹
+          4. 提交更改
+          
+          ### 方式2: 选择保留某一版本
+          ```bash
+          # 保留当前版本（删除上游版本）
+          find rules/ -name "*_upstream_*" -type d -exec rm -rf {} +
+          
+          # 或者使用上游版本（替换当前版本）
+          # for dir in rules/*_upstream_*; do
+          #   original=${dir/_upstream_*/}
+          #   rm -rf "$original"
+          #   mv "$dir" "$original"
+          # done
+          ```
+          
+          ### 方式3: 下次强制覆盖
+          在 GitHub Actions 中手动触发同步时，勾选 "强制覆盖AI配置" 选项
+          
+          EOF
+          
+          echo "📝 冲突解决指南已创建: CONFLICT_RESOLUTION.md"
+
       - name: Commit and Push changes
         run: |
-          # 查看状态
+          # 查看状态和变更统计
+          echo ">>> Checking sync results..."
           git status
+          
+          # 统计变更文件数量
+          ADDED=$(git status --porcelain | grep "^A" | wc -l)
+          MODIFIED=$(git status --porcelain | grep "^M" | wc -l)
+          DELETED=$(git status --porcelain | grep "^D" | wc -l)
+          
+          echo "Files added: $ADDED, modified: $MODIFIED, deleted: $DELETED"
+          
+          # 显示受保护的AI文件夹状态
+          echo ">>> Protected AI directories status:"
+          for dir in OpenAI Anthropic Gemini Copilot AI GlobalMedia; do
+            if [ -d "rules/$dir" ]; then
+              COUNT=$(find "rules/$dir" -name "*.yaml" -o -name "*.list" | wc -l)
+              echo "  $dir: $COUNT files (protected)"
+            fi
+          done
           
           # 添加所有变更
           git add .
           
-          # 修复后的检测逻辑：
-          # --staged 表示检查刚才 git add 进去的内容
-          # --quiet 表示不输出具体内容，只通过退出码告诉我们有没有变动
-          # (如果有变动返回 1，没有变动返回 0)
+          # 检测是否有变更并提交
           if ! git diff --staged --quiet; then
-            git commit -m "Auto sync: Update configs from upstream $(date +'%Y-%m-%d')"
-            git push
-            echo "Changes pushed successfully."
+            if [ "$SHOULD_CREATE_PR" = "true" ]; then
+              # 冲突模式：创建PR
+              BRANCH_NAME="auto-sync-conflict-$(date +'%Y%m%d-%H%M%S')"
+              
+              # 创建新分支
+              git checkout -b "$BRANCH_NAME"
+              
+              # 提交到新分支
+              COMMIT_MSG="🔄 Auto sync with AI config conflicts ($(date +'%Y-%m-%d'))
+
+              📊 Changes: +$ADDED ~$MODIFIED -$DELETED files
+              ⚠️  AI配置冲突需要手动解决
+              🔍 请查看 CONFLICT_RESOLUTION.md 获取详细信息
+              
+              🔄 Synced from:
+              - blackmatrix7/ios_rule_script  
+              - dahaha-365/YaNet
+              - sirkey5/clash--singbox--subsotre.js
+              
+              💡 上游AI配置已保存为 *_upstream_* 文件夹供对比"
+              
+              git commit -m "$COMMIT_MSG"
+              git push -u origin "$BRANCH_NAME"
+              
+              echo "🔀 PR分支已创建: $BRANCH_NAME"
+              echo "📝 请手动审核和合并，或者重新运行工作流并勾选'强制覆盖AI配置'"
+              
+            else
+              # 正常模式：直接推送
+              FORCE_FLAG=""
+              if [ "${{ github.event.inputs.force_overwrite_ai }}" = "true" ]; then
+                FORCE_FLAG=" (AI配置已强制覆盖)"
+              fi
+              
+              COMMIT_MSG="Auto sync: Update configs from upstream $(date +'%Y-%m-%d')$FORCE_FLAG
+
+              📊 Changes: +$ADDED ~$MODIFIED -$DELETED files
+              🛡️  Protected AI classifications preserved
+              🔄 Synced from: blackmatrix7/ios_rule_script, dahaha-365/YaNet, sirkey5/clash--singbox--subsotre.js
+              
+              [skip ci]"
+              
+              git commit -m "$COMMIT_MSG"
+              git push
+              echo "✅ Changes pushed successfully!"
+            fi
           else
-            echo "No changes detected. Skipping push."
+            echo "ℹ️  No changes detected. Skipping push."
           fi

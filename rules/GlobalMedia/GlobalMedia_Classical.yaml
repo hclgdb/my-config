@@ -1,19 +1,16 @@
 # NAME: GlobalMedia
 # AUTHOR: blackmatrix7
 # REPO: https://github.com/blackmatrix7/ios_rule_script
-# UPDATED: 2025-12-08 02:08:06
-# DOMAIN: 37
-# DOMAIN-KEYWORD: 26
-# DOMAIN-SUFFIX: 1275
+# UPDATED: 2025-12-14 02:08:06
+# DOMAIN: 29
+# DOMAIN-KEYWORD: 24
+# DOMAIN-SUFFIX: 1254
 # IP-CIDR: 918
 # IP-CIDR6: 6
 # PROCESS-NAME: 3
-# TOTAL: 2265
+# TOTAL: 2234
 payload:
-  - DOMAIN,ai.google.dev
-  - DOMAIN,aistudio.google.com
   - DOMAIN,akmcdnoversea-tw.inter.ptqy.gitv.tv
-  - DOMAIN,api.githubcopilot.com
   - DOMAIN,api.groq.com
   - DOMAIN,api.okzy.tv
   - DOMAIN,api.together.xyz
@@ -22,14 +19,12 @@ payload:
   - DOMAIN,bcbolt446c5271-a.akamaihd.net
   - DOMAIN,chuangcachecdnoversea-tw.inter.ptqy.gitv.tv
   - DOMAIN,console.groq.com
-  - DOMAIN,copilot-proxy.githubusercontent.com
   - DOMAIN,cs428.wpc.edgecastcdn.net
   - DOMAIN,dashasiafox.akamaized.netflix
   - DOMAIN,daznfeeds.com.edgekey.net
   - DOMAIN,dca-lm-livedazn.secure.footprint.net
   - DOMAIN,e13252.dscg.akamaiedge.net
   - DOMAIN,edge.cwtv-vod-ext.top.comcast.net
-  - DOMAIN,generativelanguage.googleapis.com
   - DOMAIN,gspe1-ssl.ls.apple.com
   - DOMAIN,h-dazn.online-metrix.net
   - DOMAIN,h-netflix.online-metrix.net
@@ -42,7 +37,6 @@ payload:
   - DOMAIN,news-client.apple.com
   - DOMAIN,news-edge.apple.com
   - DOMAIN,news-events.apple.com
-  - DOMAIN,notebooklm.google.com
   - DOMAIN,ocvideo.apple.com
   - DOMAIN,rpg.pic-imges.com
   - DOMAIN,rthklive2-lh.akamaihd.net
@@ -114,7 +108,7 @@ payload:
   - DOMAIN-SUFFIX,bam.nr-data.net
   - DOMAIN-SUFFIX,bam.nr-date.net
   - DOMAIN-SUFFIX,bamgrid.com
-  - DOMAIN-SUFFIX,bard.google.com
+
   - DOMAIN-SUFFIX,bbc.co
   - DOMAIN-SUFFIX,bbc.co.uk
   - DOMAIN-SUFFIX,bbc.com
@@ -558,7 +552,7 @@ payload:
   - DOMAIN-SUFFIX,fxnetwork.com
   - DOMAIN-SUFFIX,fxnetworks.com
   - DOMAIN-SUFFIX,gamer.com.tw
-  - DOMAIN-SUFFIX,gemini.google.com
+
   - DOMAIN-SUFFIX,geraldoatlarge.com
   - DOMAIN-SUFFIX,getblueshift.com
   - DOMAIN-SUFFIX,glasamerike.net

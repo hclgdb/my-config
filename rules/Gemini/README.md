@@ -12,15 +12,15 @@ Gemini规则由《RULE GENERATOR 规则生成器》自动生成。
 
 ## 规则统计
 
-最后更新时间：2025-06-06 09:20:02
+最后更新时间：2025-12-14 14:52:08
 
 各类型规则统计：
 | 类型 | 数量(条)  | 
 | ---- | ----  |
-| DOMAIN | 3  | 
+| DOMAIN | 5  | 
 | DOMAIN-KEYWORD | 3  | 
-| DOMAIN-SUFFIX | 7  | 
-| TOTAL | 13  | 
+| DOMAIN-SUFFIX | 8  | 
+| TOTAL | 16  | 
 
 
 ## Clash 

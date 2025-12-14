@@ -1,18 +1,15 @@
 # NAME: GlobalMedia
 # AUTHOR: blackmatrix7
 # REPO: https://github.com/blackmatrix7/ios_rule_script
-# UPDATED: 2025-12-08 02:08:06
-# DOMAIN: 37
-# DOMAIN-KEYWORD: 26
-# DOMAIN-SUFFIX: 1275
+# UPDATED: 2025-12-14 02:08:06
+# DOMAIN: 29
+# DOMAIN-KEYWORD: 24
+# DOMAIN-SUFFIX: 1254
 # IP-CIDR: 918
 # IP-CIDR6: 6
 # PROCESS-NAME: 3
-# TOTAL: 2265
-ai.google.dev
-aistudio.google.com
+# TOTAL: 2234
 akmcdnoversea-tw.inter.ptqy.gitv.tv
-api.githubcopilot.com
 api.groq.com
 api.okzy.tv
 api.together.xyz
@@ -21,7 +18,7 @@ apple.comscoreresearch.com
 bcbolt446c5271-a.akamaihd.net
 chuangcachecdnoversea-tw.inter.ptqy.gitv.tv
 console.groq.com
-copilot-proxy.githubusercontent.com
+
 cs428.wpc.edgecastcdn.net
 dashasiafox.akamaized.netflix
 daznfeeds.com.edgekey.net
@@ -114,7 +111,7 @@ sydney.bing.com
 +.bam.nr-data.net
 +.bam.nr-date.net
 +.bamgrid.com
-+.bard.google.com
+
 +.bbc.co
 +.bbc.co.uk
 +.bbc.com
@@ -180,7 +177,7 @@ sydney.bing.com
 +.channel5.com
 +.chocotv.com.tw
 +.cinemax.com
-+.claude.ai
+
 +.claude.com
 +.claudeusercontent.com
 +.cloudfront.net
@@ -561,7 +558,7 @@ sydney.bing.com
 +.fxnetwork.com
 +.fxnetworks.com
 +.gamer.com.tw
-+.gemini.google.com
+
 +.geraldoatlarge.com
 +.getblueshift.com
 +.glasamerike.net

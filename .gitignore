@@ -1,8 +1,5 @@
-# 自动更新脚本
-auto_update_rules.ps1
-smart_update_rules.ps1
-daily_rule_update.ps1
-monitor_upstream.ps1
+# 临时文件和脚本（不属于项目核心）
+temp/
 
 # 脚本配置文件（可能包含敏感信息）
 monitor_config.json
@@ -28,3 +25,10 @@ suggested_updates_*.ps1
 
 # README文件（自动生成）
 README_AutoUpdate.md
+
+# 优化和验证文件
+optimization_report.md
+optimization_verification.md
+
+# 忽略配置文件本身
+.gitignore
