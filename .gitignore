@@ -1,6 +1,7 @@
 # 自动更新脚本
 auto_update_rules.ps1
 smart_update_rules.ps1
+daily_rule_update.ps1
 monitor_upstream.ps1
 
 # 脚本配置文件（可能包含敏感信息）
